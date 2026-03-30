@@ -34,12 +34,13 @@ const CONTRACT_LABELS: Record<string, string> = {
   scpi: "SCPI", capitalisation: "Capitalisation", prevoyance: "Prévoyance",
   sante: "Santé", iard: "IARD", emprunteur: "Emprunteur",
   retraite_collective: "Retraite collective", autre: "Autre",
+  livret: "Livret", cel: "CEL", pel: "PEL",
 };
 const CONTRACT_COLORS: Record<string, string> = {
   av: "#2563EB", per: "#7C3AED", pea: "#059669", cto: "#D97706",
   scpi: "#DC2626", capitalisation: "#0891B2", prevoyance: "#EA580C",
   sante: "#16A34A", iard: "#9333EA", emprunteur: "#0D9488",
-  retraite_collective: "#7C3AED", autre: "#6B7280",
+  retraite_collective: "#7C3AED", livret: "#0891B2", cel: "#0891B2", pel: "#0891B2", autre: "#6B7280",
 };
 const CAT_ICONS: Record<string, string> = {
   lettre_mission: "📄", rapport_patrimonial: "📊", contrat: "📋",
@@ -236,12 +237,13 @@ export default function App() {
                         <div key={c.id} style={{display:"flex",alignItems:"center",gap:14,padding:"14px 16px",background:"#F8F9FB",borderRadius:12,borderLeft:`3px solid ${color}`}}>
                           <div style={{width:44,height:44,borderRadius:12,background:`${color}18`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><span style={{fontSize:12,fontWeight:800,color}}>{(c.type??"").toUpperCase().slice(0,3)}</span></div>
                           <div style={{flex:1,minWidth:0}}>
-                            <div style={{fontSize:15,fontWeight:600,color:"#0B3040",marginBottom:2}}>{c.productName||CONTRACT_LABELS[c.type]||c.type}</div>
+                            <div style={{fontSize:15,fontWeight:600,color:"#0B3040",marginBottom:2}}>{c.productName||c.type}</div>
                             <div style={{fontSize:12,color:"#8FAAB6"}}>{c.insurer&&`${c.insurer} · `}{CONTRACT_LABELS[c.type]??c.type}{c.subscriptionDate&&` · Depuis ${fmtDate(c.subscriptionDate)}`}</div>
                           </div>
                           <div style={{textAlign:"right",flexShrink:0}}>
                             {val>0&&<div style={{fontSize:18,fontWeight:800,color}}>{formatVal(val)}</div>}
                             {prem>0&&<div style={{fontSize:11,color:"#8FAAB6"}}>{formatVal(prem)}/an</div>}
+                          {c.ucRatio&&c.ucRatio!=="0"&&c.ucRatio!==""&&<div style={{fontSize:11,color:"#8FAAB6"}}>{c.ucRatio}% UC</div>}
                           </div>
                         </div>
                       );

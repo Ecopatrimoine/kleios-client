@@ -12,28 +12,30 @@ export interface CabinetTheme {
 }
 
 export interface PortalDocument {
-  id:           string;
-  ref:          string;
-  name:         string;
-  fileName:     string;
-  category:     string;
-  status:       string;
-  size:         number;
-  mimeType:     string;
-  uploadedAt:   string;
-  expiresAt:    string;
+  id:              string;
+  ref:             string;
+  name:            string;
+  fileName:        string;
+  category:        string;
+  status:          string;
+  size:            number;
+  mimeType:        string;
+  uploadedAt:      string;
+  expiresAt:       string;
   visibleToClient: boolean;
 }
 
+// Placement Ploutos → affiché comme "contrat" dans le portail
 export interface PortalContract {
-  id:           string;
-  type:         string;
-  productName:  string;
-  insurer:      string;
-  status:       string;
-  currentValue: string;
-  annualPremium:string;
-  subscriptionDate: string;
+  id:              string;
+  type:            string;
+  productName:     string;
+  insurer:         string;
+  status:          string;
+  currentValue:    string;
+  annualPremium:   string;
+  subscriptionDate:string;
+  ucRatio:         string;
 }
 
 export interface PortalMessage {
@@ -49,19 +51,37 @@ export interface PortalPerson {
   lastName:   string;
   birthDate:  string;
   csp:        string;
-  email:      string;
-  phone:      string;
-  address:    string;
-  postalCode: string;
-  city:       string;
 }
 
 export interface PortalContactSummary {
-  displayName:  string;
-  person1:      PortalPerson | null;
-  person2:      PortalPerson | null;
-  civilStatus:  string;
+  displayName:       string;
+  person1:           PortalPerson | null;
+  person2:           PortalPerson | null;
+  coupleStatus:      string;
   matrimonialRegime: string;
+}
+
+// ── Mapping type placement Ploutos → label lisible ────────────────────────
+const PLACEMENT_TYPE_MAP: Record<string, string> = {
+  "Assurance-vie fonds euros":           "av",
+  "Assurance-vie unités de compte":      "av",
+  "Assurance-vie mixte":                 "av",
+  "PER assurantiel":                     "per",
+  "PER bancaire":                        "per",
+  "PEA":                                 "pea",
+  "Compte-titres":                       "cto",
+  "SCPI":                                "scpi",
+  "Contrat de capitalisation":           "capitalisation",
+  "Livret A":                            "livret",
+  "LDDS":                                "livret",
+  "LEP":                                 "livret",
+  "Livret Jeune":                        "livret",
+  "Compte épargne logement":             "cel",
+  "Plan épargne logement":               "pel",
+};
+
+function normalisePlacementType(rawType: string): string {
+  return PLACEMENT_TYPE_MAP[rawType] ?? rawType.toLowerCase().replace(/[^a-z]/g, "_");
 }
 
 export function usePortalData(portalUser: PortalUser | null) {
@@ -76,23 +96,25 @@ export function usePortalData(portalUser: PortalUser | null) {
     if (!portalUser) return;
     setLoading(true);
     try {
-      // ── Cabinet theme ──
+      // ── Cabinet theme ──────────────────────────────────────────────────
       const { data: cabinet } = await supabase
         .from("cabinet_settings")
         .select("settings")
         .eq("user_id", portalUser.cgpUserId)
         .single();
+
       if (cabinet?.settings) {
+        const s = cabinet.settings;
         setTheme({
-          cabinetName:  cabinet.settings.cabinetName  ?? "Votre cabinet",
-          advisorName:  cabinet.settings.advisorName  ?? cabinet.settings.cabinetName ?? "Votre conseiller",
-          colorNavy:    cabinet.settings.colorNavy    ?? "#0B3040",
-          colorGold:    cabinet.settings.colorGold    ?? "#C9A84C",
-          logoSrc:      cabinet.settings.logoSrc      ?? "",
+          cabinetName:  s.cabinetName  ?? s.nom ?? "Votre cabinet",
+          advisorName:  s.advisorName  ?? s.cabinetName ?? s.nom ?? "Votre conseiller",
+          colorNavy:    s.colorNavy    ?? "#0B3040",
+          colorGold:    s.colorGold    ?? "#C9A84C",
+          logoSrc:      s.logoSrc      ?? "",
         });
       }
 
-      // ── Client data (contact record) ──
+      // ── Dossier client ─────────────────────────────────────────────────
       const { data: contactData } = await supabase
         .from("clients")
         .select("display_name, payload")
@@ -102,21 +124,93 @@ export function usePortalData(portalUser: PortalUser | null) {
 
       if (contactData?.payload) {
         const p = contactData.payload;
+
+        // Détecter la structure du payload
+        // Ploutos: payload.data.person1FirstName
+        // Kleios CRM: payload.contact.person1.firstName
+        const isPloutosPayload = !!p.data?.person1FirstName || !!p.data?.person1LastName;
+        const isKleiosPayload  = !!p.contact?.person1;
+
+        let person1: PortalPerson | null = null;
+        let person2: PortalPerson | null = null;
+        let coupleStatus = "";
+        let matrimonialRegime = "";
+
+        if (isPloutosPayload) {
+          const d = p.data;
+          person1 = {
+            firstName: d.person1FirstName ?? "",
+            lastName:  d.person1LastName  ?? "",
+            birthDate: d.person1BirthDate ?? "",
+            csp:       d.person1Csp       ?? "",
+          };
+          if (d.person2FirstName || d.person2LastName) {
+            person2 = {
+              firstName: d.person2FirstName ?? "",
+              lastName:  d.person2LastName  ?? "",
+              birthDate: d.person2BirthDate ?? "",
+              csp:       d.person2Csp       ?? "",
+            };
+          }
+          coupleStatus      = d.coupleStatus      ?? "";
+          matrimonialRegime = d.matrimonialRegime ?? "";
+        } else if (isKleiosPayload) {
+          const p1 = p.contact?.person1;
+          const p2 = p.contact?.person2;
+          if (p1) person1 = { firstName: p1.firstName ?? "", lastName: p1.lastName ?? "", birthDate: p1.birthDate ?? "", csp: p1.csp ?? "" };
+          if (p2?.firstName) person2 = { firstName: p2.firstName ?? "", lastName: p2.lastName ?? "", birthDate: p2.birthDate ?? "", csp: p2.csp ?? "" };
+          coupleStatus      = p.contact?.coupleStatus      ?? "";
+          matrimonialRegime = p.contact?.matrimonialRegime ?? "";
+        }
+
         setSummary({
           displayName:       contactData.display_name,
-          person1:           p.contact?.person1 ?? null,
-          person2:           p.contact?.person2 ?? null,
-          civilStatus:       p.contact?.civilStatus ?? "",
-          matrimonialRegime: p.contact?.matrimonialRegime ?? "",
+          person1,
+          person2,
+          coupleStatus,
+          matrimonialRegime,
         });
-        // Documents visibles par le client
-        const allDocs: PortalDocument[] = (p.documents_ged ?? []).filter((d: any) => d.visibleToClient);
+
+        // ── Placements / Contrats ────────────────────────────────────────
+        if (isPloutosPayload) {
+          // Lire les placements Ploutos
+          const placements: any[] = p.data?.placements ?? [];
+          setContracts(placements.map((pl: any, i: number) => ({
+            id:              `placement_${i}`,
+            type:            normalisePlacementType(pl.type ?? ""),
+            productName:     pl.name || pl.type || "",
+            insurer:         "",
+            status:          "actif",
+            currentValue:    pl.value ?? "0",
+            annualPremium:   pl.annualIncome ?? pl.annualContribution ?? "0",
+            subscriptionDate: pl.openDate ?? "",
+            ucRatio:         pl.ucRatio ?? "",
+          })));
+        } else {
+          // Lire les contrats Kleios CRM
+          const kleiosContracts: any[] = p.contracts ?? [];
+          setContracts(kleiosContracts
+            .filter((c: any) => c.status === "actif")
+            .map((c: any) => ({
+              id:              c.id ?? Math.random().toString(),
+              type:            c.type ?? "",
+              productName:     c.productName ?? "",
+              insurer:         c.insurer ?? "",
+              status:          c.status ?? "actif",
+              currentValue:    c.currentValue ?? "0",
+              annualPremium:   c.annualPremium ?? "0",
+              subscriptionDate: c.subscriptionDate ?? "",
+              ucRatio:         c.ucRatio ?? "",
+            })));
+        }
+
+        // ── Documents GED ────────────────────────────────────────────────
+        const allDocs: PortalDocument[] = (p.documents_ged ?? p.documents ?? [])
+          .filter((d: any) => d.visibleToClient);
         setDocuments(allDocs);
-        // Contrats actifs
-        setContracts((p.contracts ?? []).filter((c: any) => c.status === "actif"));
       }
 
-      // ── Messages ──
+      // ── Messages ───────────────────────────────────────────────────────
       const { data: msgs } = await supabase
         .from("portal_messages")
         .select("*")
@@ -161,15 +255,14 @@ export function usePortalData(portalUser: PortalUser | null) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ record: data }),
-      }).catch(() => { /* silencieux si échec */ });
+      }).catch(() => {});
     }
   };
 
   const downloadDocument = async (doc: PortalDocument) => {
-    const path = doc.id; // path Supabase Storage
     const { data, error } = await supabase.storage
       .from("documents")
-      .createSignedUrl(path, 60);
+      .createSignedUrl(doc.id, 60);
     if (error) throw error;
     window.open(data.signedUrl, "_blank");
   };
