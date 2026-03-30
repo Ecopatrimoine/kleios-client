@@ -110,7 +110,7 @@ export function usePortalData(portalUser: PortalUser | null) {
           advisorName:  s.advisorName  ?? s.cabinetName ?? s.nom ?? "Votre conseiller",
           colorNavy:    s.colorNavy    ?? "#0B3040",
           colorGold:    s.colorGold    ?? "#C9A84C",
-          logoSrc:      s.logoSrc      ?? "",
+          logoSrc:      s.portalLogoUrl ?? s.logoSrc ?? "",
         });
       }
 

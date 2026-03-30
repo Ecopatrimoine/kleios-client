@@ -162,33 +162,84 @@ export default function App() {
     <div style={{minHeight:"100vh",background:"#F0F2F5",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"}}>
 
       {/* Header */}
-      <header style={{background:`linear-gradient(135deg,${navy} 0%,#144260 100%)`,boxShadow:"0 4px 20px rgba(0,0,0,0.15)"}}>
-        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px"}}>
-          {/* Logo + déco */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 0",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
-            <div style={{display:"flex",alignItems:"center",gap:12}}>
-              {theme?.logoSrc
-                ? <img src={theme.logoSrc} alt={cabinetName} style={{height:32,objectFit:"contain"}}/>
-                : <div style={{fontSize:15,fontWeight:700,color:"#fff"}}>{cabinetName}</div>}
-            </div>
-            <button onClick={signOut} style={{padding:"6px 14px",borderRadius:8,border:"1px solid rgba(255,255,255,0.20)",background:"transparent",color:"rgba(255,255,255,0.65)",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Déconnexion</button>
+      <header style={{background:`linear-gradient(160deg,${navy} 0%,#0d3d5c 50%,#144260 100%)`,position:"relative",overflow:"hidden"}}>
+        {/* Formes géométriques décoratives */}
+        <div style={{position:"absolute",top:-60,right:-60,width:300,height:300,borderRadius:"50%",background:`rgba(255,255,255,0.03)`,pointerEvents:"none"}}/>
+        <div style={{position:"absolute",bottom:-80,right:120,width:200,height:200,borderRadius:"50%",background:`${gold}08`,pointerEvents:"none"}}/>
+        <div style={{position:"absolute",top:20,left:"40%",width:1,height:"80%",background:"rgba(255,255,255,0.04)",pointerEvents:"none"}}/>
+
+        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px",position:"relative",zIndex:1}}>
+
+          {/* Barre top : déconnexion */}
+          <div style={{display:"flex",justifyContent:"flex-end",padding:"12px 0",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+            <button onClick={signOut} style={{padding:"5px 12px",borderRadius:20,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.05)",color:"rgba(255,255,255,0.50)",fontSize:11,cursor:"pointer",fontFamily:"inherit",letterSpacing:0.3}}>
+              Déconnexion
+            </button>
           </div>
-          {/* Bienvenue */}
-          <div style={{padding:"24px 0 20px"}}>
-            <div style={{fontSize:12,color:`${gold}99`,fontWeight:600,letterSpacing:0.6,textTransform:"uppercase",marginBottom:6}}>{cabinetName}</div>
-            <h1 style={{fontSize:28,fontWeight:800,color:"#fff",margin:0,lineHeight:1.2}}>Bienvenue, {clientGreeting} 👋</h1>
-            <p style={{fontSize:14,color:"rgba(255,255,255,0.55)",marginTop:6,marginBottom:0}}>
-              Votre espace client · suivi par <strong style={{color:"rgba(255,255,255,0.80)"}}>{advisorName}</strong>
-            </p>
-          </div>
-          {/* KPIs rapides */}
-          {!loading&&(encours>0||contracts.length>0)&&(
-            <div style={{display:"flex",gap:24,paddingBottom:20,flexWrap:"wrap"}}>
-              {encours>0&&(<div><div style={{fontSize:22,fontWeight:800,color:gold}}>{formatVal(encours)}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.45)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>Encours épargne</div></div>)}
-              {caPrev>0&&(<div style={{paddingLeft:20,borderLeft:"1px solid rgba(255,255,255,0.12)"}}><div style={{fontSize:22,fontWeight:800,color:"rgba(255,255,255,0.80)"}}>{formatVal(caPrev)}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.45)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>CA prévoyance</div></div>)}
-              {contracts.length>0&&(<div style={{paddingLeft:20,borderLeft:"1px solid rgba(255,255,255,0.12)"}}><div style={{fontSize:22,fontWeight:800,color:"rgba(255,255,255,0.80)"}}>{contracts.length}</div><div style={{fontSize:11,color:"rgba(255,255,255,0.45)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>Contrat{contracts.length>1?"s":""}</div></div>)}
+
+          {/* Zone principale du header */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32,padding:"28px 0 24px",alignItems:"center"}}>
+
+            {/* Gauche : Logo + bienvenue */}
+            <div>
+              {/* Logo cabinet */}
+              {theme?.logoSrc ? (
+                <div style={{marginBottom:20}}>
+                  <img src={theme.logoSrc} alt={cabinetName}
+                    style={{maxHeight:64,maxWidth:220,objectFit:"contain",filter:"brightness(0) invert(1)",opacity:0.9}}/>
+                </div>
+              ) : (
+                <div style={{marginBottom:20,display:"inline-flex",alignItems:"center",gap:10,padding:"10px 16px",borderRadius:12,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)"}}>
+                  <div style={{width:36,height:36,borderRadius:9,background:gold,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:navy}}>
+                    {cabinetName.slice(0,2).toUpperCase()}
+                  </div>
+                  <div style={{fontSize:15,fontWeight:700,color:"#fff"}}>{cabinetName}</div>
+                </div>
+              )}
+
+              {/* Bienvenue */}
+              <div style={{fontSize:11,color:`${gold}CC`,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",marginBottom:8}}>
+                Votre espace client
+              </div>
+              <h1 style={{fontSize:30,fontWeight:800,color:"#fff",margin:"0 0 8px",lineHeight:1.15}}>
+                Bienvenue,<br/>{clientGreeting} 👋
+              </h1>
+              <p style={{fontSize:13,color:"rgba(255,255,255,0.45)",margin:0,lineHeight:1.5}}>
+                Suivi par <span style={{color:"rgba(255,255,255,0.75)",fontWeight:600}}>{advisorName}</span>
+                {summary?.coupleStatus && (
+                  <span style={{marginLeft:8,padding:"2px 8px",borderRadius:20,background:"rgba(255,255,255,0.08)",fontSize:11}}>
+                    {summary.coupleStatus === "married" ? "👫 Marié(e)" : summary.coupleStatus === "pacs" ? "💑 Pacsé(e)" : ""}
+                  </span>
+                )}
+              </p>
             </div>
-          )}
+
+            {/* Droite : KPIs encours */}
+            {!loading && (encours > 0 || contracts.length > 0) && (
+              <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"flex-end"}}>
+                {encours > 0 && (
+                  <div style={{textAlign:"right",padding:"16px 20px",borderRadius:14,background:"rgba(255,255,255,0.06)",border:`1px solid ${gold}25`,backdropFilter:"blur(4px)"}}>
+                    <div style={{fontSize:32,fontWeight:800,color:gold,lineHeight:1}}>{formatVal(encours)}</div>
+                    <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6,marginTop:4}}>Encours total épargne</div>
+                  </div>
+                )}
+                <div style={{display:"flex",gap:12}}>
+                  {caPrev > 0 && (
+                    <div style={{textAlign:"center",padding:"10px 16px",borderRadius:10,background:"rgba(255,255,255,0.05)"}}>
+                      <div style={{fontSize:18,fontWeight:700,color:"rgba(255,255,255,0.85)"}}>{formatVal(caPrev)}</div>
+                      <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>Prévoyance/an</div>
+                    </div>
+                  )}
+                  {contracts.length > 0 && (
+                    <div style={{textAlign:"center",padding:"10px 16px",borderRadius:10,background:"rgba(255,255,255,0.05)"}}>
+                      <div style={{fontSize:18,fontWeight:700,color:"rgba(255,255,255,0.85)"}}>{contracts.length}</div>
+                      <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>Contrat{contracts.length>1?"s":""}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
