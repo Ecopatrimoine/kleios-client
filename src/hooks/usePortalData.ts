@@ -116,7 +116,7 @@ export function usePortalData(portalUser: PortalUser | null) {
 
       // ── Dossier client ─────────────────────────────────────────────────
       const { data: contactData } = await supabase
-        .from("clients")
+        .from("crm_contacts")
         .select("display_name, payload")
         .eq("id", portalUser.contactId)
         .eq("user_id", portalUser.cgpUserId)
@@ -125,43 +125,30 @@ export function usePortalData(portalUser: PortalUser | null) {
       if (contactData?.payload) {
         const p = contactData.payload;
 
-        // Détecter la structure du payload
-        // Ploutos: payload.data.person1FirstName
-        // Kleios CRM: payload.contact.person1.firstName
-        const isPloutosPayload = !!p.data?.person1FirstName || !!p.data?.person1LastName;
-        const isKleiosPayload  = !!p.contact?.person1;
-
+        // Structure Kleios CRM : payload.contact.person1
+        const p1 = p.contact?.person1;
+        const p2 = p.contact?.person2;
         let person1: PortalPerson | null = null;
         let person2: PortalPerson | null = null;
-        let coupleStatus = "";
-        let matrimonialRegime = "";
 
-        if (isPloutosPayload) {
-          const d = p.data;
+        if (p1) {
           person1 = {
-            firstName: d.person1FirstName ?? "",
-            lastName:  d.person1LastName  ?? "",
-            birthDate: d.person1BirthDate ?? "",
-            csp:       d.person1Csp       ?? "",
+            firstName: p1.firstName ?? p1.prenom ?? "",
+            lastName:  p1.lastName  ?? p1.nom    ?? "",
+            birthDate: p1.birthDate ?? p1.dateNaissance ?? "",
+            csp:       p1.csp       ?? "",
           };
-          if (d.person2FirstName || d.person2LastName) {
-            person2 = {
-              firstName: d.person2FirstName ?? "",
-              lastName:  d.person2LastName  ?? "",
-              birthDate: d.person2BirthDate ?? "",
-              csp:       d.person2Csp       ?? "",
-            };
-          }
-          coupleStatus      = d.coupleStatus      ?? "";
-          matrimonialRegime = d.matrimonialRegime ?? "";
-        } else if (isKleiosPayload) {
-          const p1 = p.contact?.person1;
-          const p2 = p.contact?.person2;
-          if (p1) person1 = { firstName: p1.firstName ?? "", lastName: p1.lastName ?? "", birthDate: p1.birthDate ?? "", csp: p1.csp ?? "" };
-          if (p2?.firstName) person2 = { firstName: p2.firstName ?? "", lastName: p2.lastName ?? "", birthDate: p2.birthDate ?? "", csp: p2.csp ?? "" };
-          coupleStatus      = p.contact?.coupleStatus      ?? "";
-          matrimonialRegime = p.contact?.matrimonialRegime ?? "";
         }
+        if (p2?.firstName || p2?.prenom) {
+          person2 = {
+            firstName: p2.firstName ?? p2.prenom ?? "",
+            lastName:  p2.lastName  ?? p2.nom    ?? "",
+            birthDate: p2.birthDate ?? p2.dateNaissance ?? "",
+            csp:       p2.csp       ?? "",
+          };
+        }
+        const coupleStatus      = p.contact?.coupleStatus      ?? p.contact?.situation ?? "";
+        const matrimonialRegime = p.contact?.matrimonialRegime ?? "";
 
         setSummary({
           displayName:       contactData.display_name,
@@ -171,41 +158,24 @@ export function usePortalData(portalUser: PortalUser | null) {
           matrimonialRegime,
         });
 
-        // ── Placements / Contrats ────────────────────────────────────────
-        if (isPloutosPayload) {
-          // Lire les placements Ploutos
-          const placements: any[] = p.data?.placements ?? [];
-          setContracts(placements.map((pl: any, i: number) => ({
-            id:              `placement_${i}`,
-            type:            normalisePlacementType(pl.type ?? ""),
-            productName:     pl.name || pl.type || "",
-            insurer:         "",
-            status:          "actif",
-            currentValue:    pl.value ?? "0",
-            annualPremium:   pl.annualIncome ?? pl.annualContribution ?? "0",
-            subscriptionDate: pl.openDate ?? "",
-            ucRatio:         pl.ucRatio ?? "",
+        // ── Contrats Kleios CRM ───────────────────────────────────────────
+        const kleiosContracts: any[] = p.contracts ?? [];
+        setContracts(kleiosContracts
+          .filter((c: any) => c.status === "actif")
+          .map((c: any) => ({
+            id:               c.id ?? Math.random().toString(),
+            type:             c.type ?? "",
+            productName:      c.productName ?? c.nom ?? "",
+            insurer:          c.insurer ?? c.assureur ?? "",
+            status:           c.status ?? "actif",
+            currentValue:     c.currentValue ?? c.encours ?? "0",
+            annualPremium:    c.annualPremium ?? c.cotisationAnnuelle ?? "0",
+            subscriptionDate: c.subscriptionDate ?? c.dateEffet ?? "",
+            ucRatio:          c.ucRatio ?? "",
           })));
-        } else {
-          // Lire les contrats Kleios CRM
-          const kleiosContracts: any[] = p.contracts ?? [];
-          setContracts(kleiosContracts
-            .filter((c: any) => c.status === "actif")
-            .map((c: any) => ({
-              id:              c.id ?? Math.random().toString(),
-              type:            c.type ?? "",
-              productName:     c.productName ?? "",
-              insurer:         c.insurer ?? "",
-              status:          c.status ?? "actif",
-              currentValue:    c.currentValue ?? "0",
-              annualPremium:   c.annualPremium ?? "0",
-              subscriptionDate: c.subscriptionDate ?? "",
-              ucRatio:         c.ucRatio ?? "",
-            })));
-        }
 
         // ── Documents GED ────────────────────────────────────────────────
-        const allDocs: PortalDocument[] = (p.documents_ged ?? p.documents ?? [])
+        const allDocs: PortalDocument[] = (p.documents_ged ?? p.documents ?? p.ged ?? [])
           .filter((d: any) => d.visibleToClient);
         setDocuments(allDocs);
       }
