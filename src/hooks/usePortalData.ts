@@ -4,10 +4,11 @@ import { supabase } from "../lib/supabase";
 import type { PortalUser } from "./usePortalAuth";
 
 export interface CabinetTheme {
-  cabinetName: string;
-  colorNavy:   string;
-  colorGold:   string;
-  logoSrc:     string;
+  cabinetName:  string;
+  advisorName:  string;
+  colorNavy:    string;
+  colorGold:    string;
+  logoSrc:      string;
 }
 
 export interface PortalDocument {
@@ -83,10 +84,11 @@ export function usePortalData(portalUser: PortalUser | null) {
         .single();
       if (cabinet?.settings) {
         setTheme({
-          cabinetName: cabinet.settings.cabinetName ?? "Votre conseiller",
-          colorNavy:   cabinet.settings.colorNavy   ?? "#0B3040",
-          colorGold:   cabinet.settings.colorGold   ?? "#C9A84C",
-          logoSrc:     cabinet.settings.logoSrc      ?? "",
+          cabinetName:  cabinet.settings.cabinetName  ?? "Votre cabinet",
+          advisorName:  cabinet.settings.advisorName  ?? cabinet.settings.cabinetName ?? "Votre conseiller",
+          colorNavy:    cabinet.settings.colorNavy    ?? "#0B3040",
+          colorGold:    cabinet.settings.colorGold    ?? "#C9A84C",
+          logoSrc:      cabinet.settings.logoSrc      ?? "",
         });
       }
 
