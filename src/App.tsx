@@ -20,6 +20,15 @@ function fmtDate(iso: string): string {
 function civility(p: any): string {
   return `${p?.firstName ?? ""} ${p?.lastName ?? ""}`.trim();
 }
+function greeting(p: any): string {
+  const name = civility(p);
+  if (!name) return "";
+  const genre = (p?.gender ?? p?.civilite ?? "").toLowerCase();
+  const prefix = genre.includes("f") || genre.includes("mme") || genre.includes("madame")
+    ? "Mme" : genre.includes("m") || genre.includes("mr") || genre.includes("monsieur")
+    ? "M." : "";
+  return prefix ? `${prefix} ${name}` : name;
+}
 const CONTRACT_LABELS: Record<string, string> = {
   av: "Assurance-vie", per: "PER", pea: "PEA", cto: "Compte-titres",
   scpi: "SCPI", capitalisation: "Capitalisation", prevoyance: "Prévoyance",
@@ -139,7 +148,7 @@ export default function App() {
   const advisorName=theme?.advisorName??cabinetName;
   const p1=summary?.person1;
   const p2=summary?.person2;
-  const clientFullName=p1?civility(p1):portalUser?.user.email??"";
+  const clientGreeting=p1?greeting(p1):portalUser?.user.email??"";
   const epargneCt=contracts.filter(c=>["av","per","pea","cto","scpi","capitalisation"].includes(c.type));
   const prevCt=contracts.filter(c=>["prevoyance","sante","iard","emprunteur"].includes(c.type));
   const encours=epargneCt.reduce((s,c)=>s+parseVal(c.currentValue),0);
@@ -166,7 +175,7 @@ export default function App() {
           {/* Bienvenue */}
           <div style={{padding:"24px 0 20px"}}>
             <div style={{fontSize:12,color:`${gold}99`,fontWeight:600,letterSpacing:0.6,textTransform:"uppercase",marginBottom:6}}>{cabinetName}</div>
-            <h1 style={{fontSize:28,fontWeight:800,color:"#fff",margin:0,lineHeight:1.2}}>Bienvenue, {clientFullName} 👋</h1>
+            <h1 style={{fontSize:28,fontWeight:800,color:"#fff",margin:0,lineHeight:1.2}}>Bienvenue, {clientGreeting} 👋</h1>
             <p style={{fontSize:14,color:"rgba(255,255,255,0.55)",marginTop:6,marginBottom:0}}>
               Votre espace client · suivi par <strong style={{color:"rgba(255,255,255,0.80)"}}>{advisorName}</strong>
             </p>
@@ -187,7 +196,10 @@ export default function App() {
         {loading ? (
           <div style={{textAlign:"center",padding:"60px 0",color:"#8FAAB6",fontSize:14}}>Chargement de votre espace...</div>
         ) : (
-          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1.5fr 1fr",gap:16,alignItems:"start"}}>
+
+            {/* Colonne gauche */}
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
 
             {/* Profil */}
             {summary&&(p1||p2)&&(
@@ -262,11 +274,16 @@ export default function App() {
               </div>
             </Card>
 
+            </div>
+
+            {/* Colonne droite */}
+            <div style={{display:"flex",flexDirection:"column",gap:16}}>
+
             {/* Messagerie */}
             <Card>
               <CardHeader title="Messagerie" icon="💬" color="#059669" subtitle={`Échangez avec ${advisorName}`}
                 action={unreadCount>0?(<span style={{padding:"3px 10px",borderRadius:20,background:"#EF4444",color:"#fff",fontSize:12,fontWeight:700}}>{unreadCount} non lu{unreadCount>1?"s":""}</span>):undefined}/>
-              <div style={{display:"flex",flexDirection:"column",height:360}}>
+              <div style={{display:"flex",flexDirection:"column",height:320}}>
                 <div style={{flex:1,overflowY:"auto",padding:"16px 22px 8px"}}>
                   {messages.length===0?(
                     <div style={{textAlign:"center",padding:"30px 0",color:"#9CA3AF",fontSize:14}}>Aucun message. N'hésitez pas à écrire à votre conseiller !</div>
@@ -296,7 +313,7 @@ export default function App() {
             <Card>
               <CardHeader title="Questionnaires réglementaires" icon="📋" color="#D97706" subtitle="Documents à compléter"/>
               <div style={{padding:"16px 22px"}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
                   {[{id:"kyc",title:"Connaissance client (KYC)",desc:"Vérification d'identité et obligations réglementaires",icon:"🪪",color:"#7C3AED",bg:"#F5F3FF"},{id:"mif2",title:"Profil investisseur (MIF2)",desc:"Questionnaire d'adéquation et de connaissance financière",icon:"📊",color:"#059669",bg:"#ECFDF5"}].map(q=>(
                     <div key={q.id} style={{background:q.bg,borderRadius:12,padding:"20px",border:`1px solid ${q.color}18`}}>
                       <div style={{width:48,height:48,borderRadius:12,background:`${q.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,marginBottom:12}}>{q.icon}</div>
@@ -308,6 +325,8 @@ export default function App() {
                 </div>
               </div>
             </Card>
+
+            </div>
 
           </div>
         )}
