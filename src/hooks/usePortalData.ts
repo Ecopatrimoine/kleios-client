@@ -151,7 +151,16 @@ export function usePortalData(portalUser: PortalUser | null) {
       })
       .select()
       .single();
-    if (data) setMessages(prev => [...prev, data]);
+    if (data) {
+      setMessages(prev => [...prev, data]);
+      // Notifier le CGP par email (fire-and-forget)
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+      fetch(`${supabaseUrl}/functions/v1/notify-cgp-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ record: data }),
+      }).catch(() => { /* silencieux si échec */ });
+    }
   };
 
   const downloadDocument = async (doc: PortalDocument) => {
