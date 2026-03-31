@@ -237,5 +237,70 @@ export function usePortalData(portalUser: PortalUser | null) {
     window.open(data.signedUrl, "_blank");
   };
 
-  return { theme, summary, documents, contracts, messages, loading, sendMessage, downloadDocument, reload: load };
+  // ── Upload d'un document par le client ────────────────────────────────────
+  const uploadDocument = async (
+    file: File,
+    opts: { category: string; name: string; notes?: string }
+  ) => {
+    if (!portalUser) throw new Error("Non connecté");
+
+    const timestamp = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const storagePath = `${portalUser.cgpUserId}/${portalUser.contactId}/client/${timestamp}-${safeName}`;
+
+    // 1. Upload vers Storage
+    const { error: uploadErr } = await supabase.storage
+      .from("documents")
+      .upload(storagePath, file, { upsert: false, contentType: file.type });
+    if (uploadErr) throw uploadErr;
+
+    // 2. Notifier via Edge Function (met à jour crm_contacts + email CGP)
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const res = await fetch(`${supabaseUrl}/functions/v1/portal-document-upload`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contactId:   portalUser.contactId,
+        cgpUserId:   portalUser.cgpUserId,
+        storagePath,
+        fileName:    file.name,
+        name:        opts.name || file.name,
+        category:    opts.category,
+        size:        file.size,
+        mimeType:    file.type,
+        notes:       opts.notes ?? "",
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error ?? "Erreur serveur");
+    }
+    await load(); // rafraîchit les docs
+  };
+
+  // ── Soumission d'un questionnaire réglementaire ───────────────────────────
+  const submitQuestionnaire = async (
+    questionnaireType: "kyc" | "mif2",
+    data: Record<string, unknown>
+  ) => {
+    if (!portalUser) throw new Error("Non connecté");
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+    const res = await fetch(`${supabaseUrl}/functions/v1/portal-questionnaire-submit`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contactId:         portalUser.contactId,
+        cgpUserId:         portalUser.cgpUserId,
+        questionnaireType,
+        data,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error ?? "Erreur serveur");
+    }
+  };
+
+  return { theme, summary, documents, contracts, messages, loading, sendMessage, downloadDocument, uploadDocument, submitQuestionnaire, reload: load };
 }

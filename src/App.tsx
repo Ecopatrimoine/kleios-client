@@ -131,10 +131,62 @@ function CardHeader({title,subtitle,icon,color,action}:{title:string;subtitle?:s
 
 export default function App() {
   const { authState, portalUser, signIn, signOut } = usePortalAuth();
-  const { theme, summary, documents, contracts, messages, loading, sendMessage, downloadDocument } = usePortalData(portalUser);
+  const { theme, summary, documents, contracts, messages, loading, sendMessage, downloadDocument, uploadDocument, submitQuestionnaire } = usePortalData(portalUser);
   const [msgInput,setMsgInput]=useState("");
   const [sendBusy,setSendBusy]=useState(false);
   const msgEndRef=useRef<HTMLDivElement>(null);
+
+  // ── Upload document ──────────────────────────────────────────────────────
+  const [showUpload,setShowUpload]=useState(false);
+  const [uploadFile,setUploadFile]=useState<File|null>(null);
+  const [uploadName,setUploadName]=useState("");
+  const [uploadCat,setUploadCat]=useState("autre");
+  const [uploadNotes,setUploadNotes]=useState("");
+  const [uploading,setUploading]=useState(false);
+  const [uploadErr,setUploadErr]=useState<string|null>(null);
+  const uploadRef=useRef<HTMLInputElement>(null);
+
+  const handleUpload=async()=>{
+    if(!uploadFile)return;
+    setUploading(true);setUploadErr(null);
+    try{
+      await uploadDocument(uploadFile,{category:uploadCat,name:uploadName||uploadFile.name,notes:uploadNotes});
+      setShowUpload(false);setUploadFile(null);setUploadName("");setUploadCat("autre");setUploadNotes("");
+    }catch(e:any){setUploadErr(e.message??"Erreur upload");}
+    setUploading(false);
+  };
+
+  // ── Questionnaires ───────────────────────────────────────────────────────
+  const [activeQ,setActiveQ]=useState<"kyc"|"mif2"|null>(null);
+  const [qSaving,setQSaving]=useState(false);
+  const [qDone,setQDone]=useState<"kyc"|"mif2"|null>(null);
+
+  // KYC state
+  const [kyc,setKyc]=useState({idType:"",idNumber:"",idExpiry:"",isPPE:false,isFATCA:false,isResidentFiscalUS:false,originFunds:""});
+  // MIF2 state
+  const [mif2,setMif2]=useState({
+    attitude:0 as 0|8|12|18, reactionBaisse:0 as 0|6|12|18,
+    connaitFondsEuros:false,investiFondsEuros:false,
+    connaitActions:false,investiActions:false,
+    connaitOPCVM:false,investiOPCVM:false,
+    connaitImmo:false,investiImmo:false,
+    connaitTrackers:false,investiTrackers:false,
+    connaitStructures:false,investiStructures:false,
+    aSubiPertes:false,ampleurPertes:"" as ""|-5|-10|-20|-99,reactionPertes:0 as 0|1|2|3,
+    aRealiseGains:false,ampleurGains:"" as ""|5|10|20|99,reactionGains:0 as 0|1|2|3,
+    modeGestion:"" as ""|"pilote"|"libre",
+    savoirUCRisque:false,savoirHorizonUC:false,savoirRisqueRendement:false,
+    horizon:"" as ""|"0-4"|"5-8"|"9-15"|"15+",
+  });
+
+  const handleSubmitQ=async(type:"kyc"|"mif2")=>{
+    setQSaving(true);
+    try{
+      await submitQuestionnaire(type, type==="kyc" ? kyc : {...mif2,completedDate:new Date().toISOString().slice(0,10)});
+      setQDone(type);setActiveQ(null);
+    }catch(e:any){alert("Erreur : "+(e.message??"Veuillez réessayer."));}
+    setQSaving(false);
+  };
 
   useEffect(()=>{ msgEndRef.current?.scrollIntoView({behavior:"smooth"}); },[messages.length]);
 
@@ -184,9 +236,9 @@ export default function App() {
             <div>
               {/* Logo cabinet */}
               {theme?.logoSrc ? (
-                <div style={{marginBottom:20}}>
+                <div style={{marginBottom:20,display:"inline-block",background:"rgba(255,255,255,0.95)",borderRadius:12,padding:"8px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>
                   <img src={theme.logoSrc} alt={cabinetName}
-                    style={{maxHeight:56,maxWidth:220,objectFit:"contain",display:"block"}}/>
+                    style={{maxHeight:48,maxWidth:200,objectFit:"contain",display:"block"}}/>
                 </div>
               ) : (
                 <div style={{marginBottom:20,display:"inline-flex",alignItems:"center",gap:10,padding:"10px 16px",borderRadius:12,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)"}}>
@@ -306,7 +358,54 @@ export default function App() {
 
             {/* Documents */}
             <Card>
-              <CardHeader title="Mes documents" icon="📁" color="#7C3AED" subtitle={documents.length>0?`${documents.length} document${documents.length>1?"s":""} disponible${documents.length>1?"s":""}`:"Aucun document"}/>
+              <CardHeader title="Mes documents" icon="📁" color="#7C3AED"
+                subtitle={documents.length>0?`${documents.length} document${documents.length>1?"s":""}`:"Aucun document"}
+                action={<button onClick={()=>setShowUpload(v=>!v)} style={{padding:"7px 14px",borderRadius:8,border:"none",background:"#7C3AED",color:"#fff",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>+ Envoyer</button>}
+              />
+
+              {/* Zone upload */}
+              {showUpload&&(
+                <div style={{padding:"16px 22px",background:"#F5F3FF",borderBottom:"1px solid rgba(124,58,237,0.12)"}}>
+                  <div style={{fontSize:14,fontWeight:600,color:"#4C1D95",marginBottom:12}}>Envoyer un document à votre conseiller</div>
+                  {/* Sélection fichier */}
+                  <input ref={uploadRef} type="file" style={{display:"none"}}
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xlsx"
+                    onChange={e=>{const f=e.target.files?.[0];if(f){setUploadFile(f);setUploadName(f.name.replace(/\.[^.]+$/,""));}}}/>
+                  <div onClick={()=>uploadRef.current?.click()} style={{border:"2px dashed rgba(124,58,237,0.3)",borderRadius:12,padding:"20px",textAlign:"center",cursor:"pointer",background:"#fff",marginBottom:12}}>
+                    {uploadFile?(
+                      <div style={{fontSize:14,color:"#4C1D95",fontWeight:500}}>📄 {uploadFile.name} <span style={{color:"#8FAAB6",fontWeight:400}}>({(uploadFile.size/1024).toFixed(0)} Ko)</span></div>
+                    ):(
+                      <div style={{fontSize:13,color:"#8FAAB6"}}>Cliquez pour sélectionner un fichier<br/><span style={{fontSize:11}}>PDF, Word, Image — 10 Mo max</span></div>
+                    )}
+                  </div>
+                  {uploadFile&&(<>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                      <div>
+                        <label style={{fontSize:11,fontWeight:600,color:"#6B7280",textTransform:"uppercase",letterSpacing:0.4,display:"block",marginBottom:3}}>Nom du document</label>
+                        <input value={uploadName} onChange={e=>setUploadName(e.target.value)} placeholder="ex: Pièce d'identité" style={{...INP,fontSize:13}}/>
+                      </div>
+                      <div>
+                        <label style={{fontSize:11,fontWeight:600,color:"#6B7280",textTransform:"uppercase",letterSpacing:0.4,display:"block",marginBottom:3}}>Catégorie</label>
+                        <select value={uploadCat} onChange={e=>setUploadCat(e.target.value)} style={{...INP,fontSize:13}}>
+                          <option value="kyc">🪪 KYC / Identité</option>
+                          <option value="contrat">📋 Contrat</option>
+                          <option value="autre">📁 Autre</option>
+                        </select>
+                      </div>
+                      <div style={{gridColumn:"span 2"}}>
+                        <label style={{fontSize:11,fontWeight:600,color:"#6B7280",textTransform:"uppercase",letterSpacing:0.4,display:"block",marginBottom:3}}>Note (optionnel)</label>
+                        <input value={uploadNotes} onChange={e=>setUploadNotes(e.target.value)} placeholder="Précision pour votre conseiller..." style={{...INP,fontSize:13}}/>
+                      </div>
+                    </div>
+                    {uploadErr&&<div style={{padding:"8px 12px",background:"#FEF2F2",color:"#991B1B",borderRadius:8,fontSize:13,marginBottom:10}}>{uploadErr}</div>}
+                    <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                      <button onClick={()=>{setShowUpload(false);setUploadFile(null);}} style={{padding:"8px 18px",borderRadius:8,border:"1px solid #D1D5DB",background:"#fff",color:"#6B7280",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>
+                      <button onClick={handleUpload} disabled={uploading} style={{padding:"8px 20px",borderRadius:8,border:"none",background:uploading?"#D1D5DB":"#7C3AED",color:"#fff",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>{uploading?"Envoi...":"Envoyer"}</button>
+                    </div>
+                  </>)}
+                </div>
+              )}
+
               <div style={{padding:"16px 22px"}}>
                 {documents.length===0?(
                   <div style={{textAlign:"center",padding:"24px 0",color:"#9CA3AF",fontSize:14}}>Aucun document partagé pour le moment.</div>
@@ -316,10 +415,15 @@ export default function App() {
                       <div key={doc.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",background:"#F8F9FB",borderRadius:10}}>
                         <div style={{width:38,height:38,borderRadius:10,background:"#EEF2FF",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{CAT_ICONS[doc.category]??"📄"}</div>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:14,fontWeight:600,color:"#0B3040",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{doc.name}</div>
+                          <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                            <div style={{fontSize:14,fontWeight:600,color:"#0B3040",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{doc.name}</div>
+                            {(doc as any).uploadedByClient&&<span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:20,background:"#EDE9FE",color:"#7C3AED"}}>⬆ Envoyé par vous</span>}
+                          </div>
                           <div style={{fontSize:12,color:"#8FAAB6"}}>{CAT_LABELS[doc.category]??doc.category} · {fmtDate(doc.uploadedAt)}{doc.expiresAt&&` · Expire le ${fmtDate(doc.expiresAt)}`}</div>
                         </div>
-                        <button onClick={()=>downloadDocument(doc)} style={{padding:"7px 14px",borderRadius:8,border:"1px solid rgba(11,48,64,0.15)",background:"#fff",fontSize:13,color:"#0B3040",cursor:"pointer",fontFamily:"inherit",fontWeight:600,flexShrink:0}}>⬇ Télécharger</button>
+                        {!(doc as any).uploadedByClient&&(
+                          <button onClick={()=>downloadDocument(doc)} style={{padding:"7px 14px",borderRadius:8,border:"1px solid rgba(11,48,64,0.15)",background:"#fff",fontSize:13,color:"#0B3040",cursor:"pointer",fontFamily:"inherit",fontWeight:600,flexShrink:0}}>⬇ Télécharger</button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -366,15 +470,199 @@ export default function App() {
             <Card>
               <CardHeader title="Questionnaires réglementaires" icon="📋" color="#D97706" subtitle="Documents à compléter"/>
               <div style={{padding:"16px 22px"}}>
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  {[{id:"kyc",title:"Connaissance client (KYC)",desc:"Vérification d'identité et obligations réglementaires",icon:"🪪",color:"#7C3AED",bg:"#F5F3FF"},{id:"mif2",title:"Profil investisseur (MIF2)",desc:"Questionnaire d'adéquation et de connaissance financière",icon:"📊",color:"#059669",bg:"#ECFDF5"}].map(q=>(
-                    <div key={q.id} style={{background:q.bg,borderRadius:12,padding:"20px",border:`1px solid ${q.color}18`}}>
-                      <div style={{width:48,height:48,borderRadius:12,background:`${q.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,marginBottom:12}}>{q.icon}</div>
-                      <div style={{fontSize:15,fontWeight:700,color:"#0B3040",marginBottom:4}}>{q.title}</div>
-                      <div style={{fontSize:12,color:"#8FAAB6",marginBottom:14,lineHeight:1.5}}>{q.desc}</div>
-                      <div style={{fontSize:11,fontWeight:600,padding:"5px 12px",borderRadius:20,background:"#F3F4F6",color:"#9CA3AF",display:"inline-block"}}>Disponible prochainement</div>
+
+                {/* Modal KYC */}
+                {activeQ==="kyc"&&(
+                  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+                    <div style={{background:"#fff",borderRadius:16,padding:"28px 32px",maxWidth:520,width:"100%",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.25)"}}>
+                      <div style={{fontSize:18,fontWeight:700,color:"#0B3040",marginBottom:4}}>🪪 Connaissance client (KYC)</div>
+                      <div style={{fontSize:13,color:"#8FAAB6",marginBottom:20}}>Ces informations sont requises par la réglementation pour votre suivi patrimonial.</div>
+
+                      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                        <div>
+                          <label style={{fontSize:12,fontWeight:600,color:"#6B7280",textTransform:"uppercase",letterSpacing:0.4,display:"block",marginBottom:4}}>Pièce d'identité</label>
+                          <select value={kyc.idType} onChange={e=>setKyc(p=>({...p,idType:e.target.value}))} style={INP}>
+                            <option value="">Sélectionner...</option>
+                            <option value="CNI">Carte nationale d'identité</option>
+                            <option value="passeport">Passeport</option>
+                            <option value="titre_sejour">Titre de séjour</option>
+                            <option value="permis">Permis de conduire</option>
+                          </select>
+                        </div>
+                        {kyc.idType&&(<>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                            <div><label style={{fontSize:12,fontWeight:600,color:"#6B7280",textTransform:"uppercase",letterSpacing:0.4,display:"block",marginBottom:4}}>Numéro de pièce</label><input value={kyc.idNumber} onChange={e=>setKyc(p=>({...p,idNumber:e.target.value}))} placeholder="ex: 09AX12345" style={INP}/></div>
+                            <div><label style={{fontSize:12,fontWeight:600,color:"#6B7280",textTransform:"uppercase",letterSpacing:0.4,display:"block",marginBottom:4}}>Date d'expiration</label><input type="date" value={kyc.idExpiry} onChange={e=>setKyc(p=>({...p,idExpiry:e.target.value}))} style={INP}/></div>
+                          </div>
+                        </>)}
+
+                        <div style={{background:"#FFFBEB",borderRadius:10,padding:"16px",display:"flex",flexDirection:"column",gap:12}}>
+                          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+                            <div onClick={()=>setKyc(p=>({...p,isPPE:!p.isPPE}))} style={{width:42,height:24,borderRadius:12,position:"relative",background:kyc.isPPE?"#0B3040":"#D1D5DB",transition:"background 0.2s",flexShrink:0}}>
+                              <div style={{position:"absolute",top:3,left:kyc.isPPE?20:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
+                            </div>
+                            <span style={{fontSize:14,color:"#374151"}}>Je suis une Personne Politiquement Exposée (PPE)</span>
+                          </label>
+                          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+                            <div onClick={()=>setKyc(p=>({...p,isFATCA:!p.isFATCA}))} style={{width:42,height:24,borderRadius:12,position:"relative",background:kyc.isFATCA?"#0B3040":"#D1D5DB",transition:"background 0.2s",flexShrink:0}}>
+                              <div style={{position:"absolute",top:3,left:kyc.isFATCA?20:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
+                            </div>
+                            <span style={{fontSize:14,color:"#374151"}}>Je suis concerné par la réglementation FATCA (lien avec les USA)</span>
+                          </label>
+                          <label style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}}>
+                            <div onClick={()=>setKyc(p=>({...p,isResidentFiscalUS:!p.isResidentFiscalUS}))} style={{width:42,height:24,borderRadius:12,position:"relative",background:kyc.isResidentFiscalUS?"#0B3040":"#D1D5DB",transition:"background 0.2s",flexShrink:0}}>
+                              <div style={{position:"absolute",top:3,left:kyc.isResidentFiscalUS?20:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left 0.2s"}}/>
+                            </div>
+                            <span style={{fontSize:14,color:"#374151"}}>J'ai une résidence fiscale aux États-Unis</span>
+                          </label>
+                        </div>
+
+                        <div>
+                          <label style={{fontSize:12,fontWeight:600,color:"#6B7280",textTransform:"uppercase",letterSpacing:0.4,display:"block",marginBottom:4}}>Origine principale des fonds</label>
+                          <select value={kyc.originFunds} onChange={e=>setKyc(p=>({...p,originFunds:e.target.value}))} style={INP}>
+                            <option value="">Sélectionner...</option>
+                            <option value="salaires">Salaires et revenus professionnels</option>
+                            <option value="epargne">Épargne personnelle</option>
+                            <option value="heritage">Héritage / Donation</option>
+                            <option value="cession">Cession d'entreprise ou d'actifs</option>
+                            <option value="retraite">Pensions et retraite</option>
+                            <option value="autre">Autre</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
+                        <button onClick={()=>setActiveQ(null)} style={{padding:"10px 20px",borderRadius:10,border:"1px solid #D1D5DB",background:"#fff",color:"#6B7280",fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>
+                        <button onClick={()=>handleSubmitQ("kyc")} disabled={!kyc.idType||qSaving} style={{padding:"10px 24px",borderRadius:10,border:"none",background:(!kyc.idType||qSaving)?"#D1D5DB":"#0B3040",color:(!kyc.idType||qSaving)?"#fff":"#C9A84C",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{qSaving?"Envoi...":"Envoyer mes réponses"}</button>
+                      </div>
                     </div>
-                  ))}
+                  </div>
+                )}
+
+                {/* Modal MIF2 */}
+                {activeQ==="mif2"&&(
+                  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+                    <div style={{background:"#fff",borderRadius:16,padding:"28px 32px",maxWidth:580,width:"100%",maxHeight:"90vh",overflowY:"auto",boxShadow:"0 20px 60px rgba(0,0,0,0.25)"}}>
+                      <div style={{fontSize:18,fontWeight:700,color:"#0B3040",marginBottom:4}}>📊 Profil investisseur (MIF2)</div>
+                      <div style={{fontSize:13,color:"#8FAAB6",marginBottom:20}}>Ce questionnaire permet à votre conseiller d'évaluer votre profil d'investisseur et de vous proposer des placements adaptés.</div>
+
+                      <div style={{display:"flex",flexDirection:"column",gap:20}}>
+                        {/* Q1 — Attitude risque */}
+                        <div>
+                          <div style={{fontSize:14,fontWeight:700,color:"#0B3040",marginBottom:10}}>Q1 — Quelle est votre attitude face aux risques ?</div>
+                          {[{v:0,l:"Je privilégie la sécurité, même si le rendement est faible"},{v:8,l:"J'accepte un risque limité pour améliorer légèrement le rendement"},{v:12,l:"J'accepte des fluctuations importantes pour un meilleur rendement"},{v:18,l:"Je recherche le rendement maximal, quitte à risquer de perdre une partie du capital"}].map(o=>(
+                            <div key={o.v} onClick={()=>setMif2(p=>({...p,attitude:o.v as 0|8|12|18}))} style={{padding:"12px 14px",borderRadius:10,border:`2px solid ${mif2.attitude===o.v?"#0B3040":"#E2E5EC"}`,background:mif2.attitude===o.v?"rgba(11,48,64,0.04)":"#fff",cursor:"pointer",marginBottom:6,fontSize:14,color:"#374151"}}>
+                              {mif2.attitude===o.v?"🔵":"⚪"} {o.l}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Q2 — Réaction baisse */}
+                        <div>
+                          <div style={{fontSize:14,fontWeight:700,color:"#0B3040",marginBottom:10}}>Q2 — Face à une baisse de 20% de vos placements, vous…</div>
+                          {[{v:0,l:"Vendez immédiatement pour limiter les pertes"},{v:6,l:"Attendez que ça remonte sans rien faire"},{v:12,l:"Profitez de la baisse pour réinvestir prudemment"},{v:18,l:"Investissez davantage, c'est une opportunité"}].map(o=>(
+                            <div key={o.v} onClick={()=>setMif2(p=>({...p,reactionBaisse:o.v as 0|6|12|18}))} style={{padding:"12px 14px",borderRadius:10,border:`2px solid ${mif2.reactionBaisse===o.v?"#0B3040":"#E2E5EC"}`,background:mif2.reactionBaisse===o.v?"rgba(11,48,64,0.04)":"#fff",cursor:"pointer",marginBottom:6,fontSize:14,color:"#374151"}}>
+                              {mif2.reactionBaisse===o.v?"🔵":"⚪"} {o.l}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Q3 — Connaissances */}
+                        <div>
+                          <div style={{fontSize:14,fontWeight:700,color:"#0B3040",marginBottom:10}}>Q3 — Vos connaissances et expériences en placements</div>
+                          <div style={{overflowX:"auto"}}>
+                            <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                              <thead><tr style={{background:"#F8F9FB"}}><th style={{padding:"8px 12px",textAlign:"left",color:"#6B7280",fontWeight:600}}>Produit</th><th style={{padding:"8px 12px",textAlign:"center",color:"#6B7280",fontWeight:600}}>Je connais</th><th style={{padding:"8px 12px",textAlign:"center",color:"#6B7280",fontWeight:600}}>J'ai déjà investi</th></tr></thead>
+                              <tbody>
+                                {[
+                                  {k:"connaitFondsEuros",i:"investiFondsEuros",l:"Fonds euros / Livrets"},
+                                  {k:"connaitActions",i:"investiActions",l:"Actions / Bourse"},
+                                  {k:"connaitOPCVM",i:"investiOPCVM",l:"OPCVM / Fonds"},
+                                  {k:"connaitImmo",i:"investiImmo",l:"Immobilier / SCPI"},
+                                  {k:"connaitTrackers",i:"investiTrackers",l:"ETF / Trackers"},
+                                  {k:"connaitStructures",i:"investiStructures",l:"Produits structurés"},
+                                ].map(row=>(
+                                  <tr key={row.k} style={{borderBottom:"1px solid #F0F2F6"}}>
+                                    <td style={{padding:"10px 12px",color:"#374151"}}>{row.l}</td>
+                                    <td style={{padding:"10px 12px",textAlign:"center"}}><input type="checkbox" checked={(mif2 as any)[row.k]} onChange={e=>setMif2(p=>({...p,[row.k]:e.target.checked,...(!e.target.checked?{[row.i]:false}:{})}))} style={{width:18,height:18,cursor:"pointer"}}/></td>
+                                    <td style={{padding:"10px 12px",textAlign:"center"}}><input type="checkbox" checked={(mif2 as any)[row.i]} disabled={!(mif2 as any)[row.k]} onChange={e=>setMif2(p=>({...p,[row.i]:e.target.checked}))} style={{width:18,height:18,cursor:(mif2 as any)[row.k]?"pointer":"not-allowed",opacity:(mif2 as any)[row.k]?1:0.3}}/></td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Q5 — Mode gestion */}
+                        <div>
+                          <div style={{fontSize:14,fontWeight:700,color:"#0B3040",marginBottom:10}}>Q4 — Votre mode de gestion préféré</div>
+                          {[{v:"pilote",l:"Gestion pilotée — je délègue les décisions à un professionnel"},{v:"libre",l:"Gestion libre — je prends mes propres décisions d'investissement"}].map(o=>(
+                            <div key={o.v} onClick={()=>setMif2(p=>({...p,modeGestion:o.v as "pilote"|"libre"}))} style={{padding:"12px 14px",borderRadius:10,border:`2px solid ${mif2.modeGestion===o.v?"#0B3040":"#E2E5EC"}`,background:mif2.modeGestion===o.v?"rgba(11,48,64,0.04)":"#fff",cursor:"pointer",marginBottom:6,fontSize:14,color:"#374151"}}>
+                              {mif2.modeGestion===o.v?"🔵":"⚪"} {o.l}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Q6 — Théorie */}
+                        <div>
+                          <div style={{fontSize:14,fontWeight:700,color:"#0B3040",marginBottom:10}}>Q5 — Vrai ou faux ?</div>
+                          {[
+                            {k:"savoirUCRisque",l:"Les unités de compte présentent un risque de perte en capital"},
+                            {k:"savoirHorizonUC",l:"Un horizon de placement long réduit le risque global"},
+                            {k:"savoirRisqueRendement",l:"Plus le risque est élevé, plus le rendement potentiel est élevé"},
+                          ].map(q=>(
+                            <label key={q.k} style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",marginBottom:10}}>
+                              <input type="checkbox" checked={(mif2 as any)[q.k]} onChange={e=>setMif2(p=>({...p,[q.k]:e.target.checked}))} style={{width:18,height:18,marginTop:1,cursor:"pointer",flexShrink:0}}/>
+                              <span style={{fontSize:14,color:"#374151",lineHeight:1.4}}>{q.l} <span style={{fontSize:12,color:"#10B981",fontWeight:600}}>(Vrai)</span></span>
+                            </label>
+                          ))}
+                        </div>
+
+                        {/* Horizon */}
+                        <div>
+                          <div style={{fontSize:14,fontWeight:700,color:"#0B3040",marginBottom:10}}>Q6 — Votre horizon de placement</div>
+                          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                            {[{v:"0-4",l:"Court terme",s:"0–4 ans"},{v:"5-8",l:"Moyen terme",s:"5–8 ans"},{v:"9-15",l:"Long terme",s:"9–15 ans"},{v:"15+",l:"Très long terme",s:"+15 ans"}].map(o=>(
+                              <div key={o.v} onClick={()=>setMif2(p=>({...p,horizon:o.v as "0-4"|"5-8"|"9-15"|"15+"}))} style={{padding:"14px",borderRadius:12,border:`2px solid ${mif2.horizon===o.v?"#0B3040":"#E2E5EC"}`,background:mif2.horizon===o.v?"rgba(11,48,64,0.04)":"#fff",cursor:"pointer",textAlign:"center"}}>
+                                <div style={{fontSize:14,fontWeight:700,color:"#0B3040"}}>{o.l}</div>
+                                <div style={{fontSize:12,color:"#8FAAB6",marginTop:2}}>{o.s}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{display:"flex",gap:10,marginTop:24,justifyContent:"flex-end"}}>
+                        <button onClick={()=>setActiveQ(null)} style={{padding:"10px 20px",borderRadius:10,border:"1px solid #D1D5DB",background:"#fff",color:"#6B7280",fontSize:14,cursor:"pointer",fontFamily:"inherit"}}>Annuler</button>
+                        <button onClick={()=>handleSubmitQ("mif2")} disabled={!mif2.attitude||!mif2.reactionBaisse||!mif2.modeGestion||!mif2.horizon||qSaving} style={{padding:"10px 24px",borderRadius:10,border:"none",background:(!mif2.attitude||!mif2.reactionBaisse||!mif2.modeGestion||!mif2.horizon||qSaving)?"#D1D5DB":"#0B3040",color:"#C9A84C",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{qSaving?"Envoi...":"Envoyer mes réponses"}</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  {[
+                    {id:"kyc" as const,title:"Connaissance client (KYC)",desc:"Vérification d'identité et obligations réglementaires",icon:"🪪",color:"#7C3AED",bg:"#F5F3FF"},
+                    {id:"mif2" as const,title:"Profil investisseur (MIF2)",desc:"Questionnaire d'adéquation et de connaissance financière",icon:"📊",color:"#059669",bg:"#ECFDF5"},
+                  ].map(q=>{
+                    const done=qDone===q.id;
+                    return (
+                      <div key={q.id} style={{background:q.bg,borderRadius:12,padding:"20px",border:`1px solid ${q.color}18`}}>
+                        <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
+                          <div style={{width:48,height:48,borderRadius:12,background:`${q.color}18`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0}}>{q.icon}</div>
+                          <div style={{flex:1}}>
+                            <div style={{fontSize:15,fontWeight:700,color:"#0B3040",marginBottom:3}}>{q.title}</div>
+                            <div style={{fontSize:12,color:"#8FAAB6",marginBottom:12,lineHeight:1.5}}>{q.desc}</div>
+                            {done?(
+                              <div style={{fontSize:12,fontWeight:600,padding:"5px 12px",borderRadius:20,background:"#ECFDF5",color:"#065F46",display:"inline-flex",alignItems:"center",gap:5}}>✓ Réponses envoyées — Merci !</div>
+                            ):(
+                              <button onClick={()=>setActiveQ(q.id)} style={{fontSize:13,fontWeight:600,padding:"8px 18px",borderRadius:20,border:"none",background:q.color,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>Compléter le questionnaire →</button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </Card>
