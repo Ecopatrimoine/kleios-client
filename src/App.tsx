@@ -211,92 +211,73 @@ export default function App() {
   const handleSend=async()=>{if(!msgInput.trim())return;setSendBusy(true);try{await sendMessage(msgInput);setMsgInput("");}finally{setSendBusy(false);}};
 
   return (
-    <div style={{minHeight:"100vh",background:"#F0F2F5",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif"}}>
+    <div style={{minHeight:"100vh",background:"#DDD0BB",fontFamily:"-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",position:"relative"}}>
 
-      {/* Header */}
-      <header style={{background:`linear-gradient(160deg,${navy} 0%,#0d3d5c 50%,#144260 100%)`,position:"relative",overflow:"hidden"}}>
-        {/* Formes géométriques décoratives */}
-        <div style={{position:"absolute",top:-60,right:-60,width:300,height:300,borderRadius:"50%",background:`rgba(255,255,255,0.03)`,pointerEvents:"none"}}/>
-        <div style={{position:"absolute",bottom:-80,right:120,width:200,height:200,borderRadius:"50%",background:`${gold}08`,pointerEvents:"none"}}/>
-        <div style={{position:"absolute",top:20,left:"40%",width:1,height:"80%",background:"rgba(255,255,255,0.04)",pointerEvents:"none"}}/>
+      {/* Formes abstraites de fond — cercles et arcs discrets */}
+      <div style={{position:"fixed",inset:0,pointerEvents:"none",overflow:"hidden",zIndex:0}}>
+        <div style={{position:"absolute",top:"-10%",right:"-8%",width:480,height:480,borderRadius:"50%",background:"rgba(180,155,120,0.18)"}}/>
+        <div style={{position:"absolute",top:"15%",left:"-12%",width:360,height:360,borderRadius:"50%",background:"rgba(160,135,100,0.12)"}}/>
+        <div style={{position:"absolute",bottom:"5%",right:"5%",width:260,height:260,borderRadius:"50%",background:"rgba(190,165,130,0.15)"}}/>
+        <div style={{position:"absolute",bottom:"25%",left:"8%",width:180,height:180,borderRadius:"50%",background:"rgba(170,145,110,0.10)"}}/>
+        <div style={{position:"absolute",top:"45%",right:"20%",width:120,height:120,borderRadius:"50%",background:"rgba(200,175,140,0.12)"}}/>
+        <div style={{position:"absolute",top:"60%",left:"35%",width:80,height:80,borderRadius:"50%",background:"rgba(155,130,95,0.10)"}}/>
+        {/* Arcs partiels */}
+        <div style={{position:"absolute",top:"30%",right:"-5%",width:220,height:220,borderRadius:"50%",border:"1.5px solid rgba(160,135,100,0.14)",background:"transparent"}}/>
+        <div style={{position:"absolute",bottom:"15%",left:"25%",width:160,height:160,borderRadius:"50%",border:"1px solid rgba(170,145,110,0.10)",background:"transparent"}}/>
+      </div>
 
-        <div style={{maxWidth:960,margin:"0 auto",padding:"0 20px",position:"relative",zIndex:1}}>
+      {/* Header — compact, une seule bande */}
+      <header style={{background:`linear-gradient(135deg,${navy} 0%,#0d3d5c 100%)`,position:"relative",zIndex:10,boxShadow:"0 2px 16px rgba(11,48,64,0.18)"}}>
+        <div style={{maxWidth:980,margin:"0 auto",padding:"0 24px",display:"flex",alignItems:"center",gap:20,height:68}}>
 
-          {/* Barre top : déconnexion */}
-          <div style={{display:"flex",justifyContent:"flex-end",padding:"12px 0",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
-            <button onClick={signOut} style={{padding:"5px 12px",borderRadius:20,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.05)",color:"rgba(255,255,255,0.50)",fontSize:11,cursor:"pointer",fontFamily:"inherit",letterSpacing:0.3}}>
-              Déconnexion
-            </button>
-          </div>
-
-          {/* Zone principale du header */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:32,padding:"28px 0 24px",alignItems:"center"}}>
-
-            {/* Gauche : Logo + bienvenue */}
-            <div>
-              {/* Logo cabinet */}
-              {theme?.logoSrc ? (
-                <div style={{marginBottom:20}}>
-                  <img src={theme.logoSrc} alt={cabinetName}
-                    style={{maxHeight:56,maxWidth:220,objectFit:"contain",display:"block"}}/>
-                </div>
-              ) : (
-                <div style={{marginBottom:20,display:"inline-flex",alignItems:"center",gap:10,padding:"10px 16px",borderRadius:12,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)"}}>
-                  <div style={{width:36,height:36,borderRadius:9,background:gold,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:navy}}>
-                    {cabinetName.slice(0,2).toUpperCase()}
-                  </div>
-                  <div style={{fontSize:15,fontWeight:700,color:"#fff"}}>{cabinetName}</div>
-                </div>
-              )}
-
-              {/* Bienvenue */}
-              <div style={{fontSize:11,color:`${gold}CC`,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",marginBottom:8}}>
-                Votre espace client
+          {/* Logo ou initiales */}
+          {theme?.logoSrc ? (
+            <img src={theme.logoSrc} alt={cabinetName} style={{maxHeight:40,maxWidth:160,objectFit:"contain",flexShrink:0}}/>
+          ) : (
+            <div style={{display:"inline-flex",alignItems:"center",gap:8,flexShrink:0}}>
+              <div style={{width:32,height:32,borderRadius:8,background:gold,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:navy}}>
+                {cabinetName.slice(0,2).toUpperCase()}
               </div>
-              <h1 style={{fontSize:30,fontWeight:800,color:"#fff",margin:"0 0 8px",lineHeight:1.15}}>
-                Bienvenue,<br/>{clientGreeting} 👋
-              </h1>
-              <p style={{fontSize:13,color:"rgba(255,255,255,0.45)",margin:0,lineHeight:1.5}}>
-                Suivi par <span style={{color:"rgba(255,255,255,0.75)",fontWeight:600}}>{advisorName}</span>
-                {summary?.coupleStatus && (
-                  <span style={{marginLeft:8,padding:"2px 8px",borderRadius:20,background:"rgba(255,255,255,0.08)",fontSize:11}}>
-                    {summary.coupleStatus === "married" ? "👫 Marié(e)" : summary.coupleStatus === "pacs" ? "💑 Pacsé(e)" : ""}
-                  </span>
-                )}
-              </p>
+              <span style={{fontSize:13,fontWeight:700,color:"#fff"}}>{cabinetName}</span>
             </div>
+          )}
 
-            {/* Droite : KPIs encours */}
-            {!loading && (encours > 0 || contracts.length > 0) && (
-              <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"flex-end"}}>
-                {encours > 0 && (
-                  <div style={{textAlign:"right",padding:"16px 20px",borderRadius:14,background:"rgba(255,255,255,0.06)",border:`1px solid ${gold}25`,backdropFilter:"blur(4px)"}}>
-                    <div style={{fontSize:32,fontWeight:800,color:gold,lineHeight:1}}>{formatVal(encours)}</div>
-                    <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6,marginTop:4}}>Encours total épargne</div>
-                  </div>
-                )}
-                <div style={{display:"flex",gap:12}}>
-                  {caPrev > 0 && (
-                    <div style={{textAlign:"center",padding:"10px 16px",borderRadius:10,background:"rgba(255,255,255,0.05)"}}>
-                      <div style={{fontSize:18,fontWeight:700,color:"rgba(255,255,255,0.85)"}}>{formatVal(caPrev)}</div>
-                      <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>Prévoyance/an</div>
-                    </div>
-                  )}
-                  {contracts.length > 0 && (
-                    <div style={{textAlign:"center",padding:"10px 16px",borderRadius:10,background:"rgba(255,255,255,0.05)"}}>
-                      <div style={{fontSize:18,fontWeight:700,color:"rgba(255,255,255,0.85)"}}>{contracts.length}</div>
-                      <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5,marginTop:2}}>Contrat{contracts.length>1?"s":""}</div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+          {/* Séparateur */}
+          <div style={{width:1,height:32,background:"rgba(255,255,255,0.12)",flexShrink:0}}/>
+
+          {/* Bonjour + sous-texte */}
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:15,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>
+              Bonjour, {clientGreeting} 👋
+            </div>
+            <div style={{fontSize:11,color:"rgba(255,255,255,0.45)",marginTop:1}}>
+              Suivi par <span style={{color:"rgba(255,255,255,0.70)",fontWeight:600}}>{advisorName}</span>
+            </div>
           </div>
+
+          {/* KPIs compacts */}
+          {!loading && encours > 0 && (
+            <div style={{textAlign:"right",flexShrink:0}}>
+              <div style={{fontSize:20,fontWeight:800,color:gold,lineHeight:1}}>{formatVal(encours)}</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.40)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.6,marginTop:2}}>Encours épargne</div>
+            </div>
+          )}
+          {!loading && contracts.length > 0 && (
+            <div style={{textAlign:"center",padding:"6px 12px",borderRadius:8,background:"rgba(255,255,255,0.06)",flexShrink:0}}>
+              <div style={{fontSize:16,fontWeight:700,color:"rgba(255,255,255,0.80)"}}>{contracts.length}</div>
+              <div style={{fontSize:9,color:"rgba(255,255,255,0.35)",fontWeight:600,textTransform:"uppercase",letterSpacing:0.5}}>Contrat{contracts.length>1?"s":""}</div>
+            </div>
+          )}
+
+          {/* Déconnexion */}
+          <button onClick={signOut} style={{padding:"6px 14px",borderRadius:20,border:"1px solid rgba(255,255,255,0.15)",background:"rgba(255,255,255,0.05)",color:"rgba(255,255,255,0.45)",fontSize:11,cursor:"pointer",fontFamily:"inherit",letterSpacing:0.3,flexShrink:0}}>
+            Déconnexion
+          </button>
         </div>
       </header>
 
       {/* Main */}
-      <main style={{maxWidth:960,margin:"0 auto",padding:"24px 20px 48px"}}>
+      <main style={{maxWidth:980,margin:"0 auto",padding:"24px 24px 48px",position:"relative",zIndex:1}}>
         {loading ? (
           <div style={{textAlign:"center",padding:"60px 0",color:"#8FAAB6",fontSize:14}}>Chargement de votre espace...</div>
         ) : (
@@ -466,7 +447,41 @@ export default function App() {
               </div>
             </Card>
 
-            {/* Questionnaires */}
+            {/* Prise de rendez-vous */}
+            <Card>
+              <CardHeader title="Prendre rendez-vous" icon="📅" color="#0B3040" subtitle={`Rencontrez ${advisorName}`}/>
+              <div style={{padding:"20px 22px"}}>
+                <p style={{fontSize:13,color:"#6B7280",margin:"0 0 16px",lineHeight:1.6}}>
+                  Choisissez le type de rendez-vous qui vous convient et réservez directement un créneau disponible dans l'agenda de votre conseiller.
+                </p>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {[
+                    {icon:"🤝",label:"Découverte patrimoniale",desc:"Premier entretien — bilan de votre situation"},
+                    {icon:"📊",label:"Point de suivi",desc:"Revue de votre portefeuille et stratégie"},
+                    {icon:"📋",label:"Signature de documents",desc:"Finalisation d'opérations en cours"},
+                  ].map(t=>(
+                    <div key={t.label} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",background:"#F8F9FB",borderRadius:10}}>
+                      <div style={{fontSize:22,flexShrink:0}}>{t.icon}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,color:"#0B3040"}}>{t.label}</div>
+                        <div style={{fontSize:11,color:"#8FAAB6",marginTop:1}}>{t.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={()=>window.open("https://cal.com/david-perry-ecopatrimoine-conseil-ftutid","_blank")}
+                  style={{width:"100%",marginTop:16,padding:"13px",borderRadius:12,border:"none",background:navy,color:gold,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}
+                >
+                  📅 Choisir un créneau →
+                </button>
+                <div style={{marginTop:10,fontSize:11,color:"#8FAAB6",textAlign:"center"}}>
+                  Confirmation automatique par email · Annulation gratuite
+                </div>
+              </div>
+            </Card>
+
+            {/* Questionnaires réglementaires */}
             <Card>
               <CardHeader title="Questionnaires réglementaires" icon="📋" color="#D97706" subtitle="Documents à compléter"/>
               <div style={{padding:"16px 22px"}}>
@@ -674,8 +689,8 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer style={{background:"#fff",borderTop:"1px solid rgba(11,48,64,0.06)",padding:"16px 20px",textAlign:"center"}}>
-        <div style={{fontSize:12,color:"#9CA3AF"}}>{cabinetName} · Espace client sécurisé · <span style={{opacity:0.6}}>Propulsé par Kleios</span></div>
+      <footer style={{background:"rgba(0,0,0,0.06)",borderTop:"1px solid rgba(0,0,0,0.08)",padding:"14px 20px",textAlign:"center",position:"relative",zIndex:1}}>
+        <div style={{fontSize:11,color:"rgba(80,60,40,0.50)"}}>{cabinetName} · Espace client sécurisé · <span style={{opacity:0.7}}>Propulsé par Kleios</span></div>
       </footer>
     </div>
   );
