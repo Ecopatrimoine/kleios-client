@@ -184,9 +184,9 @@ export default function App() {
             <div>
               {/* Logo cabinet */}
               {theme?.logoSrc ? (
-                <div style={{marginBottom:20}}>
+                <div style={{marginBottom:20,display:"inline-block",background:"rgba(255,255,255,0.95)",borderRadius:12,padding:"8px 16px",boxShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>
                   <img src={theme.logoSrc} alt={cabinetName}
-                    style={{maxHeight:64,maxWidth:220,objectFit:"contain",filter:"brightness(0) invert(1)",opacity:0.9}}/>
+                    style={{maxHeight:48,maxWidth:200,objectFit:"contain",display:"block"}}/>
                 </div>
               ) : (
                 <div style={{marginBottom:20,display:"inline-flex",alignItems:"center",gap:10,padding:"10px 16px",borderRadius:12,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.12)"}}>
